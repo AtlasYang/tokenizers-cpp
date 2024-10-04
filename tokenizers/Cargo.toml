@@ -16,6 +16,7 @@ with a focus on performances and versatility.
 exclude = [ "rust-toolchain", "target/*", "Cargo.lock", "benches/*.txt", "benches/*.json", "data/*" ]
 
 [lib]
+crate-type = ["cdylib"]
 name = "tokenizers"
 path = "src/lib.rs"
 bench = false

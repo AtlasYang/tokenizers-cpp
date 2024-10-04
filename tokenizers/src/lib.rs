@@ -151,3 +151,52 @@ pub use utils::parallelism;
 // Re-export for from_pretrained
 #[cfg(feature = "http")]
 pub use utils::from_pretrained::FromPretrainedParameters;
+
+use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
+use tokenizer::{EncodeInput, Tokenizer};
+
+#[no_mangle]
+pub extern "C" fn create_tokenizer(json_path: *const c_char) -> *mut Tokenizer {
+    let c_str = unsafe { CStr::from_ptr(json_path) };
+    let json_path = c_str.to_str().unwrap();
+
+    let tokenizer = Tokenizer::from_file(json_path).unwrap();
+    Box::into_raw(Box::new(tokenizer))
+}
+
+#[no_mangle]
+pub extern "C" fn encode_sentence(
+    tokenizer: *mut Tokenizer,
+    sentence: *const c_char,
+) -> *mut c_char {
+    let tokenizer = unsafe { &mut *tokenizer };
+    let c_str = unsafe { CStr::from_ptr(sentence) };
+    let sentence = c_str.to_str().unwrap();
+
+    let encoding = tokenizer
+        .encode(EncodeInput::Single(sentence.into()), true)
+        .unwrap();
+    let ids = encoding.get_ids().to_vec();
+
+    let encoded_str = format!("{:?}", ids);
+    CString::new(encoded_str).unwrap().into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn free_tokenizer(tokenizer: *mut Tokenizer) {
+    if !tokenizer.is_null() {
+        unsafe {
+            Box::from_raw(tokenizer);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn free_string(s: *mut c_char) {
+    if !s.is_null() {
+        unsafe {
+            CString::from_raw(s);
+        }
+    }
+}
